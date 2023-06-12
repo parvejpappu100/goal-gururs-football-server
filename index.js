@@ -61,6 +61,23 @@ async function run() {
 
       const result = await usersCollection.insertOne(user);
       res.send(result);
+    });
+
+
+    // * Make admin or coach:
+    app.put("/users/:id" , async(req , res) => {
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)};
+      const options = {upsert : true};
+      const updatedRole = req.body;
+      const setNewRole = {
+        $set: {
+          role: updatedRole.role
+        }
+      }
+      console.log(setNewRole)
+      const result = await usersCollection.updateOne(filter , setNewRole , options);
+      res.send(result);
     })
 
     // * Carts api---------:
@@ -80,7 +97,6 @@ async function run() {
     // * For save selected class on database:
     app.post("/carts", async (req, res) => {
       const item = req.body;
-      console.log(item);
       const result = await cartsCollection.insertOne(item);
       res.send(result);
     });
