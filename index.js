@@ -28,6 +28,7 @@ async function run() {
     const classesCollection = client.db("goalGurusDb").collection("classes");
     const coachesCollection = client.db("goalGurusDb").collection("coaches");
     const cartsCollection = client.db("goalGurusDb").collection("carts");
+    const usersCollection = client.db("goalGurusDb").collection("users");
 
     // * Classes api---------:
     app.get("/classes", async (req, res) => {
@@ -40,6 +41,22 @@ async function run() {
       const result = await coachesCollection.find().toArray();
       res.send(result);
     });
+
+    // * Users Api:
+
+    // * To save users on db:
+    app.post("/users" , async(req , res) => {
+      const user = req.body;
+
+      const query = {email : user.email};
+      const existingUser = await usersCollection.findOne(query);
+      if(existingUser){
+        return res.send({ message: "User already exist" });
+      }
+
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    })
 
     // * Carts api---------:
 
