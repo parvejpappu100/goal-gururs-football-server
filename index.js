@@ -43,6 +43,11 @@ async function run() {
     });
 
     // * Users Api:
+    // * To get all users api:
+    app.get("/users" , async( req , res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    })
 
     // * To save users on db:
     app.post("/users" , async(req , res) => {
