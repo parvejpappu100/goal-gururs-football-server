@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -25,31 +25,51 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-
     const classesCollection = client.db("goalGurusDb").collection("classes");
     const coachesCollection = client.db("goalGurusDb").collection("coaches");
     const cartsCollection = client.db("goalGurusDb").collection("carts");
 
-    // * Classes api:
-    app.get("/classes" , async(req , res) => {
-        const result = await classesCollection.find().toArray();
-        res.send(result);
+    // * Classes api---------:
+    app.get("/classes", async (req, res) => {
+      const result = await classesCollection.find().toArray();
+      res.send(result);
     });
 
-    // * Coaches Api:
-    app.get("/coaches" , async(req , res) => {
-        const result = await coachesCollection.find().toArray();
-        res.send(result);
+    // * Coaches Api--------:
+    app.get("/coaches", async (req, res) => {
+      const result = await coachesCollection.find().toArray();
+      res.send(result);
     });
 
-    // * Carts api:
-    app.post("/carts" , async(req , res) => {
+    // * Carts api---------:
+
+    // * For get selected classes api:
+    app.get("/carts", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+        return;
+      }
+      const query = { email: email };
+      const result = await cartsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // * For save selected class on database:
+    app.post("/carts", async (req, res) => {
       const item = req.body;
       console.log(item);
       const result = await cartsCollection.insertOne(item);
       res.send(result);
-    })
+    });
 
+    // * For delete cart item:
+    app.delete("/carts/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartsCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
