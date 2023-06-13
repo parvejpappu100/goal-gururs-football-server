@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const verityJWT = (req, res, next) => {
+const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
   if (!authorization) {
     return res
@@ -74,6 +74,18 @@ async function run() {
       }
       next();
     };
+    // * Verify coach:
+    const verifyCoach = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "coach") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
 
     // * Classes api---------:
     app.get("/classes", async (req, res) => {
@@ -82,7 +94,7 @@ async function run() {
     });
 
     // * update classes status:
-    app.put("/classes/:id", async (req, res) => {
+    app.put("/classes/:id",verifyJWT , verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -101,7 +113,7 @@ async function run() {
     });
 
     // * set feedback :
-    app.put("/classes/feedback/:id", async (req, res) => {
+    app.put("/classes/feedback/:id",verifyJWT , verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -127,7 +139,7 @@ async function run() {
 
     // * Users Api:
     // * To get all users api:
-    app.get("/users", verityJWT, verifyAdmin, async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -147,7 +159,7 @@ async function run() {
     });
 
     // * Check user admin or not:
-    app.get("/users/admin/:email", verityJWT, async (req, res) => {
+    app.get("/users/admin/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
@@ -161,7 +173,7 @@ async function run() {
     });
 
     // * Check coach or not:
-    app.get("/users/coach/:email", verityJWT, async (req, res) => {
+    app.get("/users/coach/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
@@ -175,7 +187,7 @@ async function run() {
     });
 
     // * Make admin or coach:
-    app.put("/users/:id", async (req, res) => {
+    app.put("/users/:id",verifyJWT , verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -194,7 +206,7 @@ async function run() {
     });
 
     // * get added class api by email:
-    app.get("/myClasses", async (req, res) => {
+    app.get("/myClasses", verifyJWT , verifyCoach, async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
@@ -206,7 +218,7 @@ async function run() {
     });
 
     // * Add new class:
-    app.post("/classes", async (req, res) => {
+    app.post("/classes", verifyJWT , verifyCoach, async (req, res) => {
       const newClass = req.body;
       const result = await classesCollection.insertOne(newClass);
       res.send(result);
@@ -215,7 +227,7 @@ async function run() {
     // * Carts api---------:
 
     // * For get selected classes api:
-    app.get("/carts", verityJWT, async (req, res) => {
+    app.get("/carts", verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         return res.send([]);
@@ -235,14 +247,14 @@ async function run() {
     });
 
     // * For save selected class on database:
-    app.post("/carts", async (req, res) => {
+    app.post("/carts", verifyJWT, async (req, res) => {
       const item = req.body;
       const result = await cartsCollection.insertOne(item);
       res.send(result);
     });
 
     // * For delete cart item:
-    app.delete("/carts/:id", async (req, res) => {
+    app.delete("/carts/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await cartsCollection.deleteOne(query);
