@@ -81,6 +81,25 @@ async function run() {
       res.send(result);
     });
 
+    // * update classes status:
+    app.put("/classes/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedStatus = req.body;
+      const setNewRole = {
+        $set: {
+          status: updatedStatus.status,
+        },
+      };
+      const result = await classesCollection.updateOne(
+        filter,
+        setNewRole,
+        options
+      );
+      res.send(result);
+    });
+
     // * Coaches Api--------:
     app.get("/coaches", async (req, res) => {
       const result = await coachesCollection.find().toArray();
