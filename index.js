@@ -155,13 +155,24 @@ async function run() {
       res.send(result);
     });
 
+    // * get added class api by email:
+    app.get("/myClasses", async (req, res) => {
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
+
+      const cursor = classesCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     // * Add new class:
-    app.post("/classes" , async(req , res) => {
+    app.post("/classes", async (req, res) => {
       const newClass = req.body;
       const result = await classesCollection.insertOne(newClass);
       res.send(result);
-    })
-
+    });
 
     // * Carts api---------:
 
