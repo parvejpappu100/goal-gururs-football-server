@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -8,6 +9,27 @@ const port = process.env.PORT || 5000;
 // * Middleware:
 app.use(cors());
 app.use(express.json());
+
+const verityJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
+
+  const token = authorization.split(" ")[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.fdnsrak.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -30,6 +52,16 @@ async function run() {
     const cartsCollection = client.db("goalGurusDb").collection("carts");
     const usersCollection = client.db("goalGurusDb").collection("users");
 
+    // * secure related:
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.send({ token });
+    });
+
     // * Classes api---------:
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -44,18 +76,18 @@ async function run() {
 
     // * Users Api:
     // * To get all users api:
-    app.get("/users" , async( req , res) => {
+    app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
-    })
+    });
 
     // * To save users on db:
-    app.post("/users" , async(req , res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
 
-      const query = {email : user.email};
+      const query = { email: user.email };
       const existingUser = await usersCollection.findOne(query);
-      if(existingUser){
+      if (existingUser) {
         return res.send({ message: "User already exist" });
       }
 
@@ -63,32 +95,57 @@ async function run() {
       res.send(result);
     });
 
+    // * Check user admin or not:
+    app.get("/users/:email", verityJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        return res.send({ admin: false });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
 
     // * Make admin or coach:
-    app.put("/users/:id" , async(req , res) => {
+    app.put("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = {_id : new ObjectId(id)};
-      const options = {upsert : true};
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const updatedRole = req.body;
       const setNewRole = {
         $set: {
-          role: updatedRole.role
-        }
-      }
-      console.log(setNewRole)
-      const result = await usersCollection.updateOne(filter , setNewRole , options);
+          role: updatedRole.role,
+        },
+      };
+      console.log(setNewRole);
+      const result = await usersCollection.updateOne(
+        filter,
+        setNewRole,
+        options
+      );
       res.send(result);
-    })
+    });
 
     // * Carts api---------:
 
     // * For get selected classes api:
-    app.get("/carts", async (req, res) => {
+    app.get("/carts", verityJWT, async (req, res) => {
       const email = req.query.email;
       if (!email) {
-        res.send([]);
-        return;
+        return res.send([]);
       }
+
+      const decodedEmail = req.decoded.email;
+
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+
       const query = { email: email };
       const result = await cartsCollection.find(query).toArray();
       res.send(result);
