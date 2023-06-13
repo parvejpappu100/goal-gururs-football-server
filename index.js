@@ -63,15 +63,17 @@ async function run() {
     });
 
     // * Verify admin:
-    const verifyAdmin = async(req , res , next) =>{
+    const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
-      const query = {email : email};
+      const query = { email: email };
       const user = await usersCollection.findOne(query);
-      if(user?.role !== "admin"){
-        return res.status(403).send({error: true , message: "forbidden message"})
+      if (user?.role !== "admin") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
       }
       next();
-    }
+    };
 
     // * Classes api---------:
     app.get("/classes", async (req, res) => {
@@ -87,7 +89,7 @@ async function run() {
 
     // * Users Api:
     // * To get all users api:
-    app.get("/users", verityJWT , verifyAdmin, async (req, res) => {
+    app.get("/users", verityJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -107,7 +109,7 @@ async function run() {
     });
 
     // * Check user admin or not:
-    app.get("/users/:email", verityJWT, async (req, res) => {
+    app.get("/users/admin/:email", verityJWT, async (req, res) => {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
@@ -117,6 +119,20 @@ async function run() {
       const query = { email: email };
       const user = await usersCollection.findOne(query);
       const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
+
+    // * Check coach or not:
+    app.get("/users/coach/:email", verityJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        return res.send({ coach: false });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { coach: user?.role === "coach" };
       res.send(result);
     });
 
