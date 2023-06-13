@@ -62,6 +62,17 @@ async function run() {
       res.send({ token });
     });
 
+    // * Verify admin:
+    const verifyAdmin = async(req , res , next) =>{
+      const email = req.decoded.email;
+      const query = {email : email};
+      const user = await usersCollection.findOne(query);
+      if(user?.role !== "admin"){
+        return res.status(403).send({error: true , message: "forbidden message"})
+      }
+      next();
+    }
+
     // * Classes api---------:
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -76,7 +87,7 @@ async function run() {
 
     // * Users Api:
     // * To get all users api:
-    app.get("/users", async (req, res) => {
+    app.get("/users", verityJWT , verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -120,7 +131,6 @@ async function run() {
           role: updatedRole.role,
         },
       };
-      console.log(setNewRole);
       const result = await usersCollection.updateOne(
         filter,
         setNewRole,
