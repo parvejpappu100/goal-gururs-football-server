@@ -100,6 +100,25 @@ async function run() {
       res.send(result);
     });
 
+    // * set feedback :
+    app.put("/classes/feedback/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const setFeedback = req.body;
+      const setNewRole = {
+        $set: {
+          feedback: setFeedback.feedback,
+        },
+      };
+      const result = await classesCollection.updateOne(
+        filter,
+        setNewRole,
+        options
+      );
+      res.send(result);
+    });
+
     // * Coaches Api--------:
     app.get("/coaches", async (req, res) => {
       const result = await coachesCollection.find().toArray();
