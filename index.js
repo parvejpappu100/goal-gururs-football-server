@@ -46,7 +46,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    client.connect();
 
     const classesCollection = client.db("goalGurusDb").collection("classes");
     const coachesCollection = client.db("goalGurusDb").collection("coaches");
@@ -231,6 +231,7 @@ async function run() {
       res.send(result);
     });
 
+
     // * Carts api---------:
 
     // * For get selected classes api:
@@ -299,7 +300,10 @@ async function run() {
 
       const query = { email: email };
 
-      const result = await paymentsCollection.find(query).sort({_id : -1}).toArray();
+      const result = await paymentsCollection
+        .find(query)
+        .sort({ _id: -1 })
+        .toArray();
       res.send(result);
     });
 
