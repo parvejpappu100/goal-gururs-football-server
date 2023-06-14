@@ -4,7 +4,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
-const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 // * Middleware:
@@ -96,7 +96,7 @@ async function run() {
     });
 
     // * update classes status:
-    app.put("/classes/:id",verifyJWT , verifyAdmin , async (req, res) => {
+    app.put("/classes/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -115,23 +115,28 @@ async function run() {
     });
 
     // * set feedback :
-    app.put("/classes/feedback/:id",verifyJWT , verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const options = { upsert: true };
-      const setFeedback = req.body;
-      const setNewRole = {
-        $set: {
-          feedback: setFeedback.feedback,
-        },
-      };
-      const result = await classesCollection.updateOne(
-        filter,
-        setNewRole,
-        options
-      );
-      res.send(result);
-    });
+    app.put(
+      "/classes/feedback/:id",
+      verifyJWT,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const options = { upsert: true };
+        const setFeedback = req.body;
+        const setNewRole = {
+          $set: {
+            feedback: setFeedback.feedback,
+          },
+        };
+        const result = await classesCollection.updateOne(
+          filter,
+          setNewRole,
+          options
+        );
+        res.send(result);
+      }
+    );
 
     // * Coaches Api--------:
     app.get("/coaches", async (req, res) => {
@@ -189,7 +194,7 @@ async function run() {
     });
 
     // * Make admin or coach:
-    app.put("/users/:id",verifyJWT , verifyAdmin , async (req, res) => {
+    app.put("/users/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -208,7 +213,7 @@ async function run() {
     });
 
     // * get added class api by email:
-    app.get("/myClasses", verifyJWT , verifyCoach, async (req, res) => {
+    app.get("/myClasses", verifyJWT, verifyCoach, async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
@@ -220,7 +225,7 @@ async function run() {
     });
 
     // * Add new class:
-    app.post("/classes", verifyJWT , verifyCoach, async (req, res) => {
+    app.post("/classes", verifyJWT, verifyCoach, async (req, res) => {
       const newClass = req.body;
       const result = await classesCollection.insertOne(newClass);
       res.send(result);
@@ -263,32 +268,50 @@ async function run() {
       res.send(result);
     });
 
-
     // * Create payment intent:
-    app.post("/create-payment-intent" , verifyJWT , async(req , res) => {
-      const {price} = req.body;
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
-        payment_method_types: ["card"]
-      })
+        payment_method_types: ["card"],
+      });
       res.send({
-        clientSecret: paymentIntent.client_secret
-      })
+        clientSecret: paymentIntent.client_secret,
+      });
     });
 
+    // * Payment related api:
+    app.get("/payments", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        return res.send([]);
+      }
 
-    // * Payment related api: 
-    app.post("/payments" , verifyJWT, async(req , res) => {
+      const decodedEmail = req.decoded.email;
+
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+
+      const query = { email: email };
+
+      const result = await paymentsCollection.find(query).sort({_id : -1}).toArray();
+      res.send(result);
+    });
+
+    app.post("/payments", verifyJWT, async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentsCollection.insertOne(payment);
 
-      const query = {classId : payment.classId};
+      const query = { classId: payment.classId };
       const deletedResult = await cartsCollection.deleteOne(query);
 
-      res.send({insertResult , deletedResult});
-    })
+      res.send({ insertResult, deletedResult });
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
