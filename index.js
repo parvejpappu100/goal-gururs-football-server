@@ -52,6 +52,7 @@ async function run() {
     const coachesCollection = client.db("goalGurusDb").collection("coaches");
     const cartsCollection = client.db("goalGurusDb").collection("carts");
     const usersCollection = client.db("goalGurusDb").collection("users");
+    const paymentsCollection = client.db("goalGurusDb").collection("payments");
 
     // * secure related:
     app.post("/jwt", (req, res) => {
@@ -275,6 +276,18 @@ async function run() {
       res.send({
         clientSecret: paymentIntent.client_secret
       })
+    });
+
+
+    // * Payment related api: 
+    app.post("/payments" , verifyJWT, async(req , res) => {
+      const payment = req.body;
+      const insertResult = await paymentsCollection.insertOne(payment);
+
+      const query = {classId : payment.classId};
+      const deletedResult = await cartsCollection.deleteOne(query);
+
+      res.send({insertResult , deletedResult});
     })
 
     // Send a ping to confirm a successful connection
